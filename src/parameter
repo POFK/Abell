@@ -1,0 +1,8 @@
+#========== parameter ===================
+GroupNum    : 5
+Base    :   /home/maotx/mycode/gadget/src/read_group/data/
+File    :   spherical_region_coordinates_group5_60Mpc.bin
+SubPath :   ./subgrids/subcatalogue.hdf5
+SubPathSave :   ./subgrids/SubSelectedCata.hdf5
+Axis    :   0
+MassLimit  : 1E14
