@@ -33,12 +33,16 @@ def f(def_Axis=0,SelectedSubNum=0):
     distance=tms.subcat['SubPos']-HaloMostBound
     tms.subcat['SubPos'][distance>250.]=tms.subcat['SubPos'][distance>250.]-500.
     tms.subcat['SubPos'][distance<-250.]=tms.subcat['SubPos'][distance<-250.]+500.
-    subcat = tms.SubSelect(R=L, L=L, range=0)
-    subcat = subcat[subcat['SubLen'] >= 1000]
+    subcat = tms.SubSelect(R=1.3, L=L, range=0)
+    subcat = subcat[subcat['SubLen'] >= 100]
     sort = np.argsort(subcat['SubLen'])[::-1]
     subcat = subcat[sort]
-    #print subcat.dtype
-    #print subcat[SelectedSubNum]
+#--------------------- test -----------------------------------------------------
+#   print HaloMostBound
+#   print subcat.dtype
+#   print subcat
+#   exit()
+#--------------------------------------------------------------------------------
     #****************************************
     # load particles:
     tms.LoadPPos()
@@ -60,10 +64,11 @@ def f(def_Axis=0,SelectedSubNum=0):
             '''
         r=r*tms.h
         l=l*tms.h
+#       return 0
         if mode=='sphere':
-            return 4./3.*np.pi*r**3.*tms.rho_crit
+            return 4./3.*np.pi*r**3.*tms.rho_crit*tms.Omega0
         elif mode=='cylinder':
-            return np.pi*r**2.*2.*l*tms.rho_crit
+            return np.pi*r**2.*2.*l*tms.rho_crit*tms.Omega0
         else:
             print '=' * 40 + sys._getframe().f_code.co_name + '=' * 40
             print 'Error!\n' 
@@ -111,13 +116,14 @@ def f(def_Axis=0,SelectedSubNum=0):
     print (sele.min(axis=0)-HaloMostBound)/tms.h
     print (sele.max(axis=0)-HaloMostBound)/tms.h
     tms.result['Projected_mass'] = sele.shape[0] * tms.ParticleM - remove_mean_mass(r=0.15,l=L,mode='cylinder')
-    print tms.result['Projected_mass']
+    print tms.result['Projected_mass']/tms.h
     # ****************************************
     # mass of particles (part 1)
     print 'part 1:'
     sele = tms.pos[np.sum((tms.pos - HaloMostBound)**2, axis=1) < Aperture**2]
     print sele.shape
     tms.PM_150kpc = sele.shape[0] * tms.ParticleM - remove_mean_mass(r=0.15,l=0,mode='sphere')
+    print '150kpc',tms.PM_150kpc/tms.h
     tms.result['PM_Part1']=tms.PM_150kpc
     # ****************************************
     # mass of particles (part 2)
@@ -128,6 +134,7 @@ def f(def_Axis=0,SelectedSubNum=0):
     bool2 = (DR[:, Axis[0]]**2 + DR[:, Axis[1]]**2) < Aperture**2.
     sele = tms.pos[bool1 * bool2]
     tms.PM_2Rhalf = sele.shape[0] * tms.ParticleM - remove_mean_mass(r=0.15,l=subcat[SelectedSubNum]['Subhalfmass'],mode='cylinder')
+    print 'Rhalf',tms.PM_2Rhalf/tms.h
     tms.result['PM_Part2']=(tms.PM_2Rhalf-tms.PM_150kpc)
     # ****************************************
     # mass of particles (part 3)
@@ -138,6 +145,7 @@ def f(def_Axis=0,SelectedSubNum=0):
     bool2 = (DR[:, Axis[0]]**2 + DR[:, Axis[1]]**2) < Aperture**2.
     sele = tms.pos[bool1 * bool2]
     tms.PM_2R200 = sele.shape[0] * tms.ParticleM-remove_mean_mass(r=0.15,l=tms.SubPro['Halo_R_Crit200'],mode='cylinder')
+    print 'R200',tms.PM_2R200/tms.h
     tms.result['PM_Part3']=(tms.PM_2R200-tms.PM_2Rhalf)
     # ****************************************
     # mass of particles (part 4)
@@ -160,8 +168,7 @@ def f(def_Axis=0,SelectedSubNum=0):
     print tms.result['PM_Part3'],tms.result['PM_Part3']/(tms.result['Projected_mass'])
     print tms.result['PM_Part4'],tms.result['PM_Part4']/(tms.result['Projected_mass'])
 #----------------------------------------
-f(def_Axis=0,SelectedSubNum=0)
-for n_subnum in np.arange(6):
+for n_subnum in np.arange(8):
     for n_axis in np.arange(3):
         f(def_Axis=n_axis,SelectedSubNum=n_subnum)
         if n_subnum==0 and n_axis==0:

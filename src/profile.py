@@ -81,7 +81,7 @@ def f(def_Axis=1,SelectedSubNum=0):
         return M
     MassNFW=f_NFW(R,SelectedSubNum)
     return np.c_[R,Mass,MassNFW]
-data=f(def_Axis=1,SelectedSubNum=0)
+data=f(def_Axis=1,SelectedSubNum=1)
 #order=np.argsort(data[:,1])
 #data=data[order]
-np.save('./output/profile_group0.npy',data)
+np.save('./output/profile_group0_sub1.npy',data)

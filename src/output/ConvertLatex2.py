@@ -4,6 +4,13 @@ import numpy as np
 import pandas as pd
 data=np.load('../readsub/SubProperty.npy')
 #s=pd.DataFrame({"a":a['a'], "b":a['a']})
+print data.dtype
+print data[2]
+print data[5]
+print data[17]
+print data[27]
+
+exit()
 def convertLatex(data):
     s=pd.DataFrame()
     dt=data.dtype

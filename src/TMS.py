@@ -11,6 +11,7 @@ class TMS():
     def __init__(self, path='./parameter'):
         self.ReadPar(path=path)
         self.ParticleM = 8.61 * 10**8  # M_solar/h
+        self.Omega0=0.25
         self.h=0.73
         self.rho_crit=2.755*10**11 # h^2*M_solar/Mpc^3
         print '=' * 40 + sys._getframe().f_code.co_name + '=' * 40
@@ -181,9 +182,9 @@ class TMS():
         HaloMostBound=np.array(HaloMostBound)
         subdis=self.subcat['SubPos']-HaloMostBound
         subposlimit=self.subcat['Subhalfmass']*range
-        poslimbool1=np.abs(subdis[:,Axis[0]])<subposlimit+R
-        poslimbool2=np.abs(subdis[:,Axis[1]])<subposlimit+R
-        poslimbool3=np.abs(subdis[:,Axis[2]])<subposlimit+L
+        poslimbool1=np.abs(subdis[:,Axis[0]])<(subposlimit+R)
+        poslimbool2=np.abs(subdis[:,Axis[1]])<(subposlimit+R)
+        poslimbool3=np.abs(subdis[:,Axis[2]])<(subposlimit+L)
         poslimbool=poslimbool1*poslimbool2*poslimbool3
         subcat=self.subcat[poslimbool]
         return subcat
@@ -192,7 +193,7 @@ class TMS():
     def NFW_fit(self,data,mode='relaxed'):
         print '=' * 20 + sys._getframe().f_code.co_name + '=' * 20
         rho_crit=self.rho_crit # h^2*M_solar/Mpc^3
-        NFW_par=np.empty(shape=[len(data)],dtype=np.dtype([('rs',np.float32,1),('delta_c',np.float32,1)]))
+        NFW_par=np.empty(shape=[len(data)],dtype=np.dtype([('rs',np.float32,1),('delta_c',np.float32,1),('r200',np.float32,1)]))
         #----------------------------------------
         if mode=='relaxed':
             C_200=5.26*(data['SubLen']/1.34*self.ParticleM/10**14)**-0.10
@@ -212,6 +213,7 @@ class TMS():
             rs_result=fsolve(Rs_fit,np.random.rand(),args=(data['Subhalfmass'][i],Sbias[i]))
             NFW_par['rs'][i]=rs_result[0]
             NFW_par['delta_c'][i]=delta_c[i]
+        NFW_par['r200']=NFW_par['rs']*C_200
     
         with h5py.File(self.Par['SubPathSave'],mode='w') as f:
             f.create_dataset(name='subcat',dtype=data.dtype,data=data)
@@ -219,14 +221,19 @@ class TMS():
             f.close()
         print 'number of subhalo:',len(NFW_par)
 
-    def SubGriding(self,NG=128,R=1.3,L=15.0,range=5,SavePath=''):
+    def SubGriding(self,NG=256,R=1.3,L=15.0,SavePath=''):
+        '''Here, NG=256 is enough!!!'''
         '''There are somethings should be modified: z-axis grids number is too small.'''
+        print '=' * 40 + sys._getframe().f_code.co_name + '=' * 40
         R=R*self.h
         L=L*self.h
         axis=self.Par['Axis']
         Axis=[0,1,2]
         Axis.remove(axis)
         Axis.append(axis)
+        NG2=np.array([NG,NG,NG])
+        NG2[Axis[2]]=NG*10
+
         with h5py.File(self.Par['SubPathSave'],mode='r') as f:
             subcat=f['subcat'][...]
             NFW_par=f['NFW_par'][...]
@@ -235,29 +242,23 @@ class TMS():
             return self.rho_crit*delta_c*rs/(r*(1.+r/rs)**2)
         Axis={Axis[0]: R, Axis[1]: R, Axis[2]: L}
         print 'Axis (r,r,l):' , Axis
-        subgrids=np.zeros(shape=[NG,NG,NG],dtype=np.float32)
-        axis_x=np.linspace(-Axis[0],Axis[0],NG)
-        axis_y=np.linspace(-Axis[1],Axis[1],NG)
-        axis_z=np.linspace(-Axis[2],Axis[2],NG)
-        gridcoord_x= (axis_x+self.Par['MostBoundX'])[:,None,None]+subgrids
-        gridcoord_y= (axis_y+self.Par['MostBoundY'])[None,:,None]+subgrids
-        gridcoord_z= (axis_z+self.Par['MostBoundZ'])[None,None,:]+subgrids
-
-        s0=0.
+        print 'Ngrid:',NG2
+        subgrids=np.zeros(shape=NG2,dtype=np.float32)
+        axis_x=np.linspace(-Axis[0],Axis[0],NG2[0])
+        axis_y=np.linspace(-Axis[1],Axis[1],NG2[1])
+        axis_z=np.linspace(-Axis[2],Axis[2],NG2[2])
         for i in np.arange(len(subcat)):
-            Distance=((subcat[i]['SubPos'][0]-gridcoord_x)**2+(subcat[i]['SubPos'][1]-gridcoord_y)**2+(subcat[i]['SubPos'][2]-gridcoord_z)**2)**0.5
-            bool=Distance<(subcat[i]['Subhalfmass']*range)
+            print i,'of', len(subcat)
+            Distance_x=(subcat[i]['SubPos'][0]-(axis_x+self.Par['MostBoundX']))**2
+            Distance_y=(subcat[i]['SubPos'][1]-(axis_y+self.Par['MostBoundY']))**2
+            Distance_z=(subcat[i]['SubPos'][2]-(axis_z+self.Par['MostBoundZ']))**2
+            Distance=(Distance_x[:,None,None]+Distance_y[None,:,None]+Distance_z[None,None,:])**0.5
+            bool=Distance<(NFW_par[i]['r200'])
             subgrids[bool]+=rho(Distance[bool],NFW_par[i]['rs'],NFW_par[i]['delta_c'])
-            # for test ========
-            s1=subgrids.sum()*(1.3**2*15.0*8*self.h**3)/NG**3-s0
-            s2=subcat[i]['SubLen']*self.ParticleM
-            print i,'of',len(subcat),':\t%g\t%g\t%.2f'%(s1,s2,s1/s2)
-            s0=subgrids.sum()*(1.3**2*15.0*8*self.h**3)/NG**3
-            # for test ========
-        dV=R*R*L*8.*self.h**3/NG**3.
+        dV=R*R*L*8./NG2.prod()
         subgrids*=dV
         np.save(SavePath,subgrids)
-        return subgrids
+        return subgrids  # return M_\odot /h
 
 
 

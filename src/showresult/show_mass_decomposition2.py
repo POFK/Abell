@@ -2,29 +2,40 @@
 # coding=utf-8
 import numpy as np
 import matplotlib.pyplot as plt
-GroupNum=5
+#GroupNum=5
+subhalos=True
 NUM=3*8
-PATH='../output/mass_decomposition_group%d.npy'%GroupNum
-data=np.load(PATH)[3:NUM]
+def getName(GroupNum):
+    return '../output/mass_decomposition_group%d.npy'%GroupNum
+def load(PATH):
+    if subhalos==True:
+        data=np.load(PATH)[3:NUM]
+    else:
+        data=np.load(PATH)[:NUM]
+    return data
+data=load(getName(0))
+data=np.vstack([data,load(getName(1))])
+data=np.vstack([data,load(getName(2))])
+data=np.vstack([data,load(getName(5))])
+#s=np.c_[data['ratio_Part1'],data['ratio_Part2'],data['ratio_Part3'],data['ratio_Part4']]
+#print s[s[:,1]>0.3]
+#exit()
 def get_midvalue(data,NUM):
     '''return middle, maximum, minimum value.'''
     a=data[np.argsort(data)]
-#   print a
+    print a
     if NUM%2==1:
         return [a[NUM/2],a[-1],a[0]]
     elif NUM%2==0:
         return [a[NUM/2-1:NUM/2+1].mean(),a[-1],a[0]]
-#----------------------------------------
-#print data[:,0]['ratio_Part4']
-#result=get_midvalue(data['ratio_Part4'][:,0],NUM)
-#print result 
-#plt.hist(data[:,0]['ratio_Part4'],bins=10)
-#plt.show()
-#exit()
-#----------------------------------------
+#print data['ratio_Part4'][:,0]
+#print data.shape
+#print get_midvalue(data['ratio_Part4'][:,0],NUM)
 
 print data.dtype.descr
 result=np.empty([4,3])
+NUM=data.shape[0]
+print NUM
 result[0,:]=get_midvalue(data['ratio_Part1'][:,0],NUM)
 result[1,:]=get_midvalue(data['ratio_Part2'][:,0],NUM)
 result[2,:]=get_midvalue(data['ratio_Part3'][:,0],NUM)
@@ -43,14 +54,16 @@ print result[:,0]
 print yerr
 
 #ax.set_ylabel('Scores')
-ax.set_title('Group %d, subhalos'%GroupNum)
+#ax.set_title('Group %d'%GroupNum)
 ax.set_xticks(ind + width / 2,minor=False)
 ax.set_xticklabels((r'$150\ \mathrm{kpc}$', r'$\mathrm{R_{half}}$', r'$\mathrm{R_{200}}$', r'$\mathrm{residual}$'))
 ax.set_yticks(np.arange(0,11)*0.1)
 ax.set_yticklabels((r'$0$',r'$0.1$',r'$0.2$',r'$0.3$',r'$0.4$',r'$0.5$',r'$0.6$',r'$0.7$',r'$0.8$',r'$0.9$',r'$1.0$',))
 #ax.legend(rects1[0], 0)
 
+plt.title('subhalos')
 plt.xlim([-0.5,4.0])
 plt.ylim([0.0,1.0])
+#plt.yscale('log')
 #plt.show()
-plt.savefig('mass_decomposition_group%d_subhalos.eps'%GroupNum)
+plt.savefig('mass_decomposition_all4groups_allsub.eps')

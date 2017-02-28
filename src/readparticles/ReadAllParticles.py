@@ -34,6 +34,9 @@ for i in np.arange(512):
         if i==0:
             print header['npart']
     npart+=header['npart'][0,1]
+print header.dtype
+print header['OmegaL']
+exit()
 POS=np.empty(shape=[npart,3],dtype=np.float32)
 Npos=0 
 for i in np.arange(512):

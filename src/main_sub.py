@@ -5,7 +5,17 @@ import h5py
 import matplotlib.pyplot as plt
 from TMS import TMS
 tms=TMS(path='./parameter')
+tms.Par['Axis']=2
+GridNum=128
 tms.LoadSubCat()
+HaloMostBound=[]
+HaloMostBound.append(tms.Par['MostBoundX'])
+HaloMostBound.append(tms.Par['MostBoundY'])
+HaloMostBound.append(tms.Par['MostBoundZ'])
+HaloMostBound=np.array(HaloMostBound)
+distance=tms.subcat['SubPos']-HaloMostBound
+tms.subcat['SubPos'][distance>250.]=tms.subcat['SubPos'][distance>250.]-500.
+tms.subcat['SubPos'][distance<-250.]=tms.subcat['SubPos'][distance<-250.]+500.
 subcat=tms.SubSelect(R=1.3,L=15.0)
 subcat=subcat[subcat['SubLen']>=1000]
 print subcat.shape
@@ -16,18 +26,44 @@ with h5py.File(path,mode='r') as f:
     subcat=f['subcat'][...]
     NFW_par=f['NFW_par'][...]
     f.close()
-#subGrids=tms.SubGriding(NG=512)
-subGrids=np.load('sub_grid.npy')
+subGrids=tms.SubGriding(NG=GridNum,R=1.3,L=15.0,range=2)
+#subGrids=np.load('sub_grid.npy')
 #========== griding =====================
 datag=subGrids.sum(axis=tms.Par['Axis'])
 
-H=1.3*2/512
-Dindex=0.25/H
+H=1.3*2/GridNum
+Dindex=0.15/H
 print Dindex
 
+# added in 20170214:
+#--------------------------------------------------------------------------------
+#sigma = [0.001,0.002,0.003,0.004,0.005]
+sigma = [0.001]
+#MassLimitArr=np.arange(46)*10**12+5*10**12
+MassLimitArr=10**np.linspace(11,15,200)  # unit is M_odot
+#f=h5py.File('./output/SubNumber_group0.hdf5',mode='w')
+for i in sigma:
+    result=np.zeros(shape=[len(MassLimitArr),2],dtype=np.float32)
+    pdata = tms.PeakFinder(datag, sigma=i, R=1.3, N=GridNum, Aperture=0.15)
+    pdata[:,2]/=tms.h
+    np.save('./output/NFW_massfunc_pdata_group%d_axis_%d.npy'%(tms.Par['GroupNum'],tms.Par['Axis']),pdata)
+    for j in np.arange(len(MassLimitArr)):
+        pdata = pdata[pdata[:, 2] > MassLimitArr[j]]
+        Pnum=len(pdata)
+        result[j,0]=MassLimitArr[j]
+        result[j,1]=float(Pnum)
+    print 'sigma:',i
+    print result
+#   f.create_dataset(name='Axis%d/sigma%.3f'%(tms.Par['Axis'],i),
+#                    dtype=np.float32,
+#                    data=result)
+    np.save('./output/NFW_massfunc_group%d_axis_%d.npy'%(tms.Par['GroupNum'],tms.Par['Axis']),result)
+#f.close()
+exit()
+#--------------------------------------------------------------------------------
 tms.PeakFinder(datag,sigma=0.001)
-tms.PeakFinder(datag,sigma=0.002)
-tms.PeakFinder(datag,sigma=0.003)
+#tms.PeakFinder(datag,sigma=0.002)
+#tms.PeakFinder(datag,sigma=0.003)
 
 pind=np.array(list(set([tuple(i) for i in tms.peakind])))
 print 'number of peaks:', len(pind)
