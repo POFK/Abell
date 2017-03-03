@@ -1,0 +1,12 @@
+# Data
+*test*
+*.npy
+*.hdf5
+*.bin
+*.eps
+*.png
+*.npy
+*.txt
+*.tar
+backup*
+*.swp
