@@ -4,8 +4,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from TMS import TMS
 import os
-sigma=0.005
-OutDir='/datascope/indra4/Cluster/S%.3f/'%sigma
+sigma=0.001
+OutDir='/datascope/indra4/Cluster/result/S%.3f/'%sigma
 if not os.path.exists(OutDir):
     os.makedirs(OutDir)
 def run(GN=0,axis=0):
@@ -25,7 +25,7 @@ def run(GN=0,axis=0):
     tms.pos[distance > 500.] = tms.pos[distance > 500.] - 1000.
     tms.pos[distance < -500.] = tms.pos[distance < -500.] + 1000.
     
-    GridNum = 256
+    GridNum = 512
     Ngrid = [GridNum, GridNum, GridNum]
     Ngrid[tms.Par['Axis']] = 1
     datag = tms.ParticleGridingNGP(Ngrid=Ngrid, R=1.3, L=15)
@@ -65,13 +65,13 @@ def run(GN=0,axis=0):
 dt=np.dtype([('GroupNum',np.int32,1),
         ('Axis',np.int32,1),
         ('ProjectedMass',np.float64,1)])
-all_mass=np.empty(shape=[36],dtype=dt)
+all_mass=np.empty(shape=[36*3],dtype=dt)
 for i in np.arange(36):
     for axj in np.arange(3):
         gn,ais,pm=run(GN=i,axis=axj)
-        all_mass[i]['GroupNum']=gn
-        all_mass[i]['Axis']=ais
-        all_mass[i]['ProjectedMass']=pm
+        all_mass[i+axj*36]['GroupNum']=gn
+        all_mass[i+axj*36]['Axis']=ais
+        all_mass[i+axj*36]['ProjectedMass']=pm
         plt.cla()
         plt.clf()
 np.save(OutDir+'ProjectedMass.npy',all_mass)
