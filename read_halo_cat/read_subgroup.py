@@ -27,7 +27,7 @@ class ReadSub():
         f.close()
         self.Ngroups=DataSub[0]['Ngroups']
         self.Nsubgroups=DataSub[0]['Nsubgroups']
-	self.header=DataSub
+        self.header=DataSub
 #       print self.num,DataSub
 #       print DataSub.dtype
 

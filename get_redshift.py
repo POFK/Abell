@@ -22,6 +22,7 @@ def read_redshift(n):
     Info = np.fromfile(file=f, dtype=dt, count=1)
     f.close()
     print n,Info['redshift']
+    print Info['massarr']
     return n,Info
 
 n,info=read_redshift(52)

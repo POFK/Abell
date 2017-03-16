@@ -4,6 +4,7 @@
 *.hdf5
 *.bin
 *.eps
+*.pdf
 *.png
 *.npy
 *.txt

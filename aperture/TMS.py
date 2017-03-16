@@ -40,6 +40,7 @@ class TMS():
         self.Par['MostBoundX']=Sx
         self.Par['MostBoundY']=Sy
         self.Par['MostBoundZ']=Sz
+        self.Par['SimNum']=SimNum
 #       print self.GroupCat
         return "M200rank%d_Sim%d_X%.2f_Y%.2f_Z%.2f_Rad%.2f.bin"%(Mrank,SimNum,Sx,Sy,Sz,Rad)
     
@@ -79,7 +80,7 @@ class TMS():
     
     def ParticleGridingNGP(self,Ngrid,R=1.3,L=15.0):
         '''
-        input :R 1.3Mpc   L 30Mpc
+        input :R 1.3Mpc   L 15Mpc
         Ngrid : [512,512,1]
         '''
         print '=' * 20 + sys._getframe().f_code.co_name + '=' * 20
@@ -102,17 +103,24 @@ class TMS():
         Ngrid[Ngrid.index(1)]=np.max(Ngrid)
         Ngrid[Axis[2]]=1
         print Ngrid
-        dataG=self.ParticleNGP(data,Ngrid[0],Ngrid[1],Ngrid[2])
+        dataG=self.ParticleNGP(data,Ngrid[0],Ngrid[1],Ngrid[2],Axis,R,L)
         return dataG
     
-    def ParticleNGP(self,data,Nx,Ny,Nz):
+    def ParticleNGP(self,data,Nx,Ny,Nz,Axis,R,L):
         print '=' * 20 + sys._getframe().f_code.co_name + '=' * 20
-        bin_x=np.linspace(data[:,0].min()-10**-5,data[:,0].max()+10**-5,Nx+1)
-        bin_y=np.linspace(data[:,1].min()-10**-5,data[:,1].max()+10**-5,Ny+1)
-        bin_z=np.linspace(data[:,2].min()-10**-5,data[:,2].max()+10**-5,Nz+1)
-        Lx=data[:,0].max()-data[:,0].min()
-        Ly=data[:,1].max()-data[:,1].min()
-        Lz=data[:,2].max()-data[:,2].min()
+        # add in 0307
+        HaloMostBound=[]
+        HaloMostBound.append(self.Par['MostBoundX'])
+        HaloMostBound.append(self.Par['MostBoundY'])
+        HaloMostBound.append(self.Par['MostBoundZ'])
+        D=np.array([R,R,L])
+        bin_x=np.linspace(HaloMostBound[0]-D[Axis.index(0)],HaloMostBound[0]+D[Axis.index(0)],Nx+1)
+        bin_y=np.linspace(HaloMostBound[1]-D[Axis.index(1)],HaloMostBound[1]+D[Axis.index(1)],Ny+1)
+        bin_z=np.linspace(HaloMostBound[2]-D[Axis.index(2)],HaloMostBound[2]+D[Axis.index(2)],Nz+1)
+        #======================================== 
+        Lx=bin_x.max()-bin_x.min()
+        Ly=bin_y.max()-bin_y.min()
+        Lz=bin_z.max()-bin_z.min()
         print "L:",Lx,Ly,Lz
         print "N:",Nx,Ny,Nz
         nn,self.edges=np.histogramdd(data,bins=(bin_x,bin_y,bin_z))
@@ -151,6 +159,28 @@ class TMS():
         lmax1=np.c_[lmax1[0],lmax1[1]].tolist()
         peakind=np.array([i for i in lmax0 if i in lmax1])
         p1len=len(peakind)
+#       #========== added in 0309 ===============
+#       def around(i,j): 
+#           return np.array([datas[i-1,j-1],
+#                   datas[i-1,j],
+#                   datas[i-1,j+1],
+#                   datas[i,j-1],
+#                   datas[i,j+1],
+#                   datas[i+1,j-1],
+#                   datas[i+1,j],
+#                   datas[i+1,j+1],
+#                   ])
+#       loop=0
+#       deletenum=[]
+#       for i in np.arange(len(peakind)):
+#           s=peakind[i]
+#           bool=datas[s[0],s[1]]>around(s[0],s[1])
+#           if not bool.prod():
+#               deletenum.append(i)
+#       peakind=np.delete(peakind,deletenum,0)
+#       plen_around=len(peakind)
+#       print 'plen_around:',plen_around
+#       #========================================
     
         pdata=np.empty([len(peakind),3],dtype=np.float32)
         pdata[:,:2]=peakind[:]
@@ -165,7 +195,45 @@ class TMS():
         loop=0
         for i in np.arange(1,len(pdata)):
             Darr=pdata[i-loop]-pdata[:i-loop]
-            Dbool=(Darr[:,0]**2+Darr[:,1]**2)<(Dindex**2)
+            Dbool=(Darr[:,0]**2+Darr[:,1]**2)<(((4./3.)*Dindex)**2)
+            if Dbool.sum()>0:
+                pdata=np.delete(pdata,i-loop,0)
+                loop=loop+1
+        p2len=len(pdata)
+        print sigma,p1len,p2len
+        return pdata
+    
+    def PeakFinder_sub(self,datag,datasub,sigma=0.001,R=1.3,N=512,Aperture=0.15):
+        # finder peaks with subhalo position!
+        '''
+        run as:
+        for sigma in np.linspace(0.001,0.15,15,endpoint=False):
+            tms.PeakFinder(datag,sigma=sigma)
+        pind=np.array(list(set([tuple(i) for i in tms.peakind])))
+        '''
+    
+        H=self.h*R*2/N
+        Dindex=Aperture*self.h/H
+    
+        lmax0,lmax1=signal.argrelmax(datasub)
+        peakind=np.c_[lmax0,lmax1]
+#       print peakind
+        p1len=len(peakind)
+    
+        pdata=np.empty([len(peakind),3],dtype=np.float32)
+        pdata[:,:2]=peakind[:]
+        indexarr=np.zeros(shape=[N,N])
+        indexarr_x=np.arange(N)[:,None]+indexarr
+        indexarr_y=np.arange(N)[None,:]+indexarr
+        for i in np.arange(len(peakind)):
+            bool=((peakind[i,0]-indexarr_x)**2.+(peakind[i,1]-indexarr_y)**2.)<Dindex**2.
+            pdata[i,2]=datag[bool].sum()
+    
+        pdata=pdata[np.argsort(pdata[:,2])[::-1]]
+        loop=0
+        for i in np.arange(1,len(pdata)):
+            Darr=pdata[i-loop]-pdata[:i-loop]
+            Dbool=(Darr[:,0]**2+Darr[:,1]**2)<(((4./3.)*Dindex)**2)
             if Dbool.sum()>0:
                 pdata=np.delete(pdata,i-loop,0)
                 loop=loop+1
@@ -275,19 +343,31 @@ class TMS():
         subgrids*=dV
         np.save(SavePath,subgrids)
         return subgrids  # return M_\odot /h
+    def MeanCritMass(self,R=0.15,L=15.0):
+        z=0.3197
+        V=np.pi*R**2.*L*2.
+        M=self.rho_crit*0.272*(1+z)**3*V
+        return M/self.h  # return M_\odot
+
 
 
 
 
 if __name__ == '__main__':
-    a = TMS(path='./parameter',GroupNum=0)
-#    a.ReadPar()
-    a.LoadPPos()
-    s=a.ParticleGridingNGP(Ngrid=[256,256,1]).reshape(256,256)
-    print s.sum()
-#   a.LoadSubCat()
-#   subcat=a.SubSelect(R=1.3,L=15.0)
-#   a.NFW_fit(data=subcat)
-#   print a.subcat['SubLen']
-#   print a.subcat['SubPos']
-#   print a.subcat['Subhalfmass']
+    tms = TMS(path='./parameter',GroupNum=0)
+    tms.Par['Axis'] = 0
+    tms.LoadPPos()
+    HaloMostBound = []
+    HaloMostBound.append(tms.Par['MostBoundX'])
+    HaloMostBound.append(tms.Par['MostBoundY'])
+    HaloMostBound.append(tms.Par['MostBoundZ'])
+    HaloMostBound = np.array(HaloMostBound)
+    distance = tms.pos - HaloMostBound
+    tms.pos[distance > 500.] = tms.pos[distance > 500.] - 1000.
+    tms.pos[distance < -500.] = tms.pos[distance < -500.] + 1000.
+    datag=tms.ParticleGridingNGP(Ngrid=[256,256,1]).reshape(256,256)
+    pdata=tms.PeakFinder(datag,sigma=0.001,R=1.3,N=256,Aperture=0.15)
+    pdata[:,2]/=tms.h
+    print pdata[pdata[:,2]>5*10**13]
+    print pdata[pdata[:,2]>5*10**13].shape
+#    print s.sum()
