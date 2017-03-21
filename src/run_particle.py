@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import h5py
 from TMS import TMS
 tms = TMS(path='./parameter')
-tms.Par['Axis'] = 0
+tms.Par['Axis'] = 2
 tms.Par['MassLimit'] = 5e13
 
 tms.LoadPPos()

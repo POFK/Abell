@@ -53,24 +53,17 @@ class ReadSub():
         return DataSub[0]
 
 if __name__=='__main__':
-    id=7298858190
     test=ReadSub(0)
-    for i in np.arange(1):
+    for i in np.arange(5):
+        print '='*80
+        print i
         test.__init__(i)
         data=test.LoadSub()
-        if id in data['SubMostBoundID'].tolist():
-            print i
-            break
-
-
-
-'''
-test=DataSub[0]["SubMostBoundID"]
-id=7298858190
-if id in test:
-    tt=test.tolist()
-    index=tt.index(id)
-    print index
-    print i
-    break
-'''
+        print data['NsubPerHalo'][:10]
+        exit()
+        suboffset=data['FirstSubOfHalo']
+        a=data['Halo_M_Crit200']
+        bool=a>10**2
+        print a[bool]
+        print suboffset[bool]
+        order=np.argsort(a)[::-1]

@@ -1,7 +1,7 @@
 #========== parameter ===================
-GroupNum    : 2
+GroupNum    : 0
 Base    :   /home/maotx/mycode/gadget/src/read_group/data/
-File    :   spherical_region_coordinates_group2_60Mpc.bin
+File    :   spherical_region_coordinates_group0_60Mpc.bin
 SubPath :   ./subgrids/subcatalogue.hdf5
 SubPathSave :   ./subgrids/SubSelectedCata.hdf5
 Axis    :   0

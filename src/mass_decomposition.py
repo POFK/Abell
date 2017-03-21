@@ -64,7 +64,6 @@ def f(def_Axis=0,SelectedSubNum=0):
             '''
         r=r*tms.h
         l=l*tms.h
-#       return 0
         if mode=='sphere':
             return 4./3.*np.pi*r**3.*tms.rho_crit*tms.Omega0
         elif mode=='cylinder':
@@ -135,7 +134,8 @@ def f(def_Axis=0,SelectedSubNum=0):
     sele = tms.pos[bool1 * bool2]
     tms.PM_2Rhalf = sele.shape[0] * tms.ParticleM - remove_mean_mass(r=0.15,l=subcat[SelectedSubNum]['Subhalfmass'],mode='cylinder')
     print 'Rhalf',tms.PM_2Rhalf/tms.h
-    tms.result['PM_Part2']=(tms.PM_2Rhalf-tms.PM_150kpc)
+#   tms.result['PM_Part2']=(tms.PM_2Rhalf-tms.PM_150kpc)
+    tms.result['PM_Part2']=(tms.PM_2Rhalf)
     # ****************************************
     # mass of particles (part 3)
     print 'part 3:'
@@ -146,7 +146,8 @@ def f(def_Axis=0,SelectedSubNum=0):
     sele = tms.pos[bool1 * bool2]
     tms.PM_2R200 = sele.shape[0] * tms.ParticleM-remove_mean_mass(r=0.15,l=tms.SubPro['Halo_R_Crit200'],mode='cylinder')
     print 'R200',tms.PM_2R200/tms.h
-    tms.result['PM_Part3']=(tms.PM_2R200-tms.PM_2Rhalf)
+#   tms.result['PM_Part3']=(tms.PM_2R200-tms.PM_2Rhalf)
+    tms.result['PM_Part3']=(tms.PM_2R200)
     # ****************************************
     # mass of particles (part 4)
     print 'part 4:'
